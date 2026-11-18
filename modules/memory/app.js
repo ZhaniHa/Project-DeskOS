@@ -480,9 +480,10 @@
     height: 420,
     icon:
       '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" ' +
-      'stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
-      'stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" ' +
-      'rx="2"></rect></svg>',
+      'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+      'stroke-linejoin="round"><rect x="4" y="5" width="16" height="5" ' +
+      'rx="1.5"></rect><rect x="4" y="14" width="16" height="5" ' +
+      'rx="1.5"></rect><path d="M8 7.5h.01M12 7.5h4M8 16.5h.01M12 16.5h4"></path></svg>',
     mount: function (el) {
       container = el;
       // Rebuild hanya bila init awal belum berhasil (mis. MemoryLogic dimuat

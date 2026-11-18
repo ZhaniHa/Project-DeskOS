@@ -194,8 +194,8 @@
 
   // Hitung sisa burst dan status tiap proses berdasarkan langkah yang sudah jalan
   function hitungStatus() {
-    var terakhir = {};   // indeks gantt terakhir tiap pid
-    var dijalankan = {}; // total durasi yang sudah dieksekusi tiap pid
+    var terakhir = Object.create(null);   // indeks gantt terakhir tiap pid
+    var dijalankan = Object.create(null); // total durasi yang sudah dieksekusi tiap pid
     state.gantt.forEach(function (g, i) {
       terakhir[g.pid] = i;
       if (i < state.pointer) dijalankan[g.pid] = (dijalankan[g.pid] || 0) + (g.end - g.start);
@@ -380,7 +380,7 @@
     title: 'Scheduler (CPU)',
     width: 560,
     height: 420,
-    icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>',
+    icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="10" height="10" rx="2"></rect><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"></path><path d="M10 10h4v4h-4z"></path></svg>',
     mount: function (el_) {
       container = el_;
       render();

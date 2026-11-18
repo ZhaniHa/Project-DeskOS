@@ -391,7 +391,7 @@
     title: 'Disk Scheduling',
     width: 600,
     height: 460,
-    icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle></svg>',
+    icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"></rect><path d="M3 10h18"></path><circle cx="7" cy="15" r="1"></circle><path d="M11 15h6"></path></svg>',
     mount: function (el) {
       container = el;
       render();

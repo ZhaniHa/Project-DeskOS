@@ -10,6 +10,10 @@
 
   function $(id) { return document.getElementById(id); }
   function appById(id) { return window.OS.apps.find(function (a) { return a.id === id; }); }
+  function taskbarTop() {
+    var taskbar = $('taskbar');
+    return taskbar ? taskbar.getBoundingClientRect().top : window.innerHeight;
+  }
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -46,11 +50,15 @@
 
     var win = el('div', 'window');
     win.dataset.app = id;
-    win.style.width = Math.min(app.width, window.innerWidth - 20) + 'px';
-    win.style.height = Math.min(app.height, window.innerHeight - 100) + 'px';
+    var availableWidth = Math.max(0, window.innerWidth - 24);
+    var width = Math.min(app.width, availableWidth);
+    win.style.width = width + 'px';
     var n = wins.size;
-    win.style.left = (140 + (n % 5) * 36) + 'px';
-    win.style.top = (50 + (n % 5) * 30) + 'px';
+    var maxLeft = Math.max(12, window.innerWidth - width - 12);
+    win.style.left = Math.min(140 + (n % 5) * 36, maxLeft) + 'px';
+    var maxTop = Math.max(12, taskbarTop() - 212);
+    win.style.top = Math.min(50 + (n % 5) * 30, maxTop) + 'px';
+    win.style.height = Math.max(0, Math.min(app.height, taskbarTop() - parseFloat(win.style.top) - 12)) + 'px';
 
     var bar = el('div', 'titlebar');
     bar.appendChild(el('span', 'titlebar-title', app.title));
@@ -99,15 +107,34 @@
 
   document.addEventListener('mousemove', function (e) {
     if (drag) {
-      drag.el.style.left = Math.max(0, e.clientX - drag.ox) + 'px';
-      drag.el.style.top = Math.max(0, e.clientY - drag.oy) + 'px';
+      var maxLeft = Math.max(0, window.innerWidth - drag.el.offsetWidth);
+      drag.el.style.left = Math.min(maxLeft, Math.max(0, e.clientX - drag.ox)) + 'px';
+      var maxTop = Math.max(0, taskbarTop() - drag.el.offsetHeight - 12);
+      drag.el.style.top = Math.min(maxTop, Math.max(0, e.clientY - drag.oy)) + 'px';
     }
     if (resize) {
-      resize.el.style.width = Math.max(320, resize.w + e.clientX - resize.x) + 'px';
-      resize.el.style.height = Math.max(200, resize.h + e.clientY - resize.y) + 'px';
+      var maxWidth = Math.max(0, window.innerWidth - resize.el.offsetLeft - 12);
+      var minWidth = Math.min(320, maxWidth);
+      resize.el.style.width = Math.min(maxWidth, Math.max(minWidth, resize.w + e.clientX - resize.x)) + 'px';
+      var maxHeight = Math.max(0, taskbarTop() - resize.el.offsetTop - 12);
+      var minHeight = Math.min(200, maxHeight);
+      resize.el.style.height = Math.min(maxHeight, Math.max(minHeight, resize.h + e.clientY - resize.y)) + 'px';
     }
   });
   document.addEventListener('mouseup', function () { drag = null; resize = null; });
+  window.addEventListener('resize', function () {
+    wins.forEach(function (w) {
+      var win = w.el;
+      var maxWidth = Math.max(0, window.innerWidth - 24);
+      win.style.width = Math.min(win.offsetWidth, maxWidth) + 'px';
+      var maxLeft = Math.max(12, window.innerWidth - win.offsetWidth - 12);
+      win.style.left = Math.min(win.offsetLeft, maxLeft) + 'px';
+      var maxTop = Math.max(12, taskbarTop() - 212);
+      win.style.top = Math.min(win.offsetTop, maxTop) + 'px';
+      var maxHeight = Math.max(0, taskbarTop() - win.offsetTop - 12);
+      win.style.height = Math.min(win.offsetHeight, maxHeight) + 'px';
+    });
+  });
 
   /* ---------- taskbar ---------- */
 

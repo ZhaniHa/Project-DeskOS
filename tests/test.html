@@ -121,6 +121,20 @@ group('CPU', window.CpuLogic, [
     errCode(L.run(null), 'INVALID_INPUT');
     errCode(L.run(undefined), 'INVALID_INPUT');
   }],
+  ['PID khusus tidak merusak hasil dan duplikat tetap ditolak', (L) => {
+    ['__proto__', 'constructor', 'toString'].forEach(pid => {
+      const r = okResult(L.run(cpu('RR', [{ pid, burst: 2 }], 1)));
+      expectEq(r.perProcess[0].pid, pid, 'pid');
+      expectEq([r.perProcess[0].completion, r.perProcess[0].waiting, r.perProcess[0].turnaround], [2, 0, 2], 'metrik proses');
+    });
+    errCode(L.run(cpu('FCFS', [{ pid: '__proto__', burst: 1 }, { pid: '__proto__', burst: 2 }], 1)), 'INVALID_INPUT');
+  }],
+  ['RR menolak input yang menghasilkan terlalu banyak langkah', (L) => {
+    errCode(L.run(cpu('RR', [{ pid: 'P1', burst: 10001 }], 1)), 'INVALID_INPUT');
+  }],
+  ['Nilai waktu di luar rentang aman ditolak', (L) => {
+    errCode(L.run(cpu('FCFS', [{ pid: 'P1', arrival: Number.MAX_SAFE_INTEGER, burst: 1 }], 1)), 'INVALID_INPUT');
+  }],
   ['Fungsi murni: tidak mengubah input dan hasil sama untuk input sama', (L) => {
     const input = deepFreeze(cpu('RR', JSON.parse(JSON.stringify(P)), 2));
     const a = L.run(input), b = L.run(input);
@@ -294,6 +308,10 @@ group('Monitor', window.MonitorLogic, [
   ['toCsv: format baris dan header', (L) => {
     const r = okResult(L.toCsv(E));
     expectEq(r.csv, 'tick,event,pid,detail\n1,os:dispatch,P1,0-2\n1,os:page-fault,P1,page=7\n2,os:dispatch,P2,2-4\n2,os:page-fault,P2,page=0\n3,os:dispatch,P1,4-6\n4,os:disk-served,P1,page=7;target=70;seek=17', 'csv');
+  }],
+  ['toCsv: koma, tanda kutip, dan baris baru di-escape dengan benar', (L) => {
+    const r = okResult(L.toCsv([{ name: 'os:dispatch', tick: 1, detail: { pid: 'P1,\"X', start: 0, end: 1 } }]));
+    expectEq(r.csv, 'tick,event,pid,detail\n1,os:dispatch,\"P1,\"\"X\",0-1', 'csv');
   }],
   ['Input tidak valid ditolak dengan ok:false', (L) => {
     errCode(L.summarize(null), 'INVALID_INPUT');

@@ -3,6 +3,7 @@
   'use strict';
 
   var MAX_PROCESSES = 20;
+  var MAX_RR_STEPS = 10000;
   var ALGORITHMS = ['FCFS', 'SJF', 'RR'];
 
   // Pembuat amplop balasan
@@ -42,8 +43,11 @@
       quantum = input.quantum;
     }
 
-    var seen = {};
+    var seen = Object.create(null);
     var procs = [];
+    var totalBurst = 0;
+    var maxArrival = 0;
+    var rrSteps = 0;
     for (var i = 0; i < input.processes.length; i++) {
       var p = input.processes[i];
       if (p === null || typeof p !== 'object' || Array.isArray(p)) {
@@ -58,13 +62,27 @@
       seen[p.pid] = true;
 
       var arrival = (p.arrival === undefined) ? 0 : p.arrival;   // arrival opsional, default 0
-      if (!Number.isInteger(arrival) || arrival < 0) {
+      if (!Number.isSafeInteger(arrival) || arrival < 0) {
         return { error: fail('INVALID_INPUT', 'arrival harus bilangan bulat >= 0') };
       }
-      if (!Number.isInteger(p.burst) || p.burst < 1) {
+      if (!Number.isSafeInteger(p.burst) || p.burst < 1) {
         return { error: fail('INVALID_INPUT', 'burst harus bilangan bulat >= 1') };
       }
+      totalBurst += p.burst;
+      if (!Number.isSafeInteger(totalBurst)) {
+        return { error: fail('INVALID_INPUT', 'total burst terlalu besar untuk dihitung dengan aman') };
+      }
+      if (arrival > maxArrival) maxArrival = arrival;
+      if (input.algorithm === 'RR') {
+        rrSteps += Math.ceil(p.burst / quantum);
+        if (rrSteps > MAX_RR_STEPS) {
+          return { error: fail('INVALID_INPUT', 'RR menghasilkan terlalu banyak langkah (maksimal ' + MAX_RR_STEPS + ')') };
+        }
+      }
       procs.push({ pid: p.pid, arrival: arrival, burst: p.burst });
+    }
+    if (maxArrival > Number.MAX_SAFE_INTEGER - totalBurst) {
+      return { error: fail('INVALID_INPUT', 'waktu penyelesaian terlalu besar untuk dihitung dengan aman') };
     }
     return { procs: procs, quantum: quantum };
   }
@@ -114,7 +132,7 @@
     var arrivals = procs.slice().sort(function (a, b) {
       return (a.arrival - b.arrival) || cmpPid(a.pid, b.pid);
     });
-    var rem = {};
+    var rem = Object.create(null);
     arrivals.forEach(function (p) { rem[p.pid] = p.burst; });
 
     var queue = [];
@@ -155,8 +173,8 @@
 
   // Hitung metrik per proses (urutan mengikuti input) dan rata-rata dari gantt
   function buildResult(algorithm, procs, gantt) {
-    var firstStart = {};
-    var lastEnd = {};
+    var firstStart = Object.create(null);
+    var lastEnd = Object.create(null);
     gantt.forEach(function (g) {
       if (!Object.prototype.hasOwnProperty.call(firstStart, g.pid)) firstStart[g.pid] = g.start;
       lastEnd[g.pid] = g.end;

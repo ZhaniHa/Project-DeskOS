@@ -5,6 +5,7 @@
 
   var container = null;   // elemen jendela saat terbuka, null saat tertutup
   var events = [];        // rekaman event { name, tick, detail } (state modul, bukan di DOM)
+  var MAX_EVENTS = 500;
 
   // ---------- Pembantu DOM (semua teks lewat textContent) ----------
 
@@ -161,6 +162,9 @@
     });
     tabel.appendChild(tbody);
     sec.appendChild(tabel);
+    if (events.length === MAX_EVENTS) {
+      sec.appendChild(buat('div', 'app-label', 'Ringkasan dibatasi pada ' + MAX_EVENTS + ' event terbaru.'));
+    }
     return sec;
   }
 
@@ -243,6 +247,7 @@
           return;
         }
         events.push({ name: nama, tick: tickSekarang(), detail: detail });
+        if (events.length > MAX_EVENTS) events.shift();
         render();   // render() sendiri berhenti bila container === null
       } catch (err) {
         window.kirimLog('Monitor', 'error saat merekam ' + nama + ': ' + err.message);
@@ -270,7 +275,7 @@
     title: 'System Monitor',
     width: 560,
     height: 420,
-    icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>',
+    icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M7 21h10M12 17v4"></path><path d="m6 11 3-3 3 5 3-4 3 2"></path></svg>',
     mount: function (el) {
       container = el;
       render();

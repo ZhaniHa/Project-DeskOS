@@ -43,6 +43,11 @@
     return null;
   }
 
+  function csvCell(value) {
+    var text = String(value);
+    return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+  }
+
   // Ringkasan statistik dari daftar event rekaman.
   function summarize(events) {
     try {
@@ -51,7 +56,7 @@
 
       var dispatch = 0, faults = 0, diskOps = 0;
       var totalSeek = 0;
-      var peta = {};          // pid -> { pid, dispatches, faults }
+      var peta = Object.create(null); // pid -> { pid, dispatches, faults }
 
       function ambil(pid) {
         if (!Object.prototype.hasOwnProperty.call(peta, pid)) {
@@ -110,7 +115,12 @@
         } else {
           teksDetail = 'page=' + d.page + ';target=' + d.target + ';seek=' + d.seek;
         }
-        baris.push(ev.tick + ',' + ev.name + ',' + d.pid + ',' + teksDetail);
+        baris.push([
+          ev.tick,
+          csvCell(ev.name),
+          csvCell(d.pid),
+          csvCell(teksDetail)
+        ].join(','));
       }
       return { ok: true, result: { csv: baris.join('\n') } };
     } catch (e) {
