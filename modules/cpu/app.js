@@ -49,7 +49,9 @@
       perProcess: [],
       pointer: 0,       // jumlah entri gantt yang sudah di-dispatch
       error: '',        // pesan error untuk ditampilkan
-      compare: null     // hasil Compare All (null = belum dijalankan)
+      status: null,     // { kind, text } pesan hasil aksi terakhir
+      compare: null,    // hasil Compare All (null = belum dijalankan)
+      helpOpen: false   // tampilkan panel bantuan (?)
     };
   }
 
@@ -131,31 +133,54 @@
     recalc(null);
   }
 
+  function hintText() {
+    if (state.error || state.gantt.length === 0) {
+      return 'Perbaiki format input proses lalu tekan Load Data (contoh: P1:6, P2:3).';
+    }
+    if (state.pointer === 0) {
+      return 'Langkah 1: pilih algoritma atau ubah antrean proses, lalu tekan Dispatch untuk menjalankan satu langkah CPU.';
+    }
+    if (state.pointer < state.gantt.length) {
+      return 'Langkah 2: tekan Dispatch lagi (' + state.pointer + '/' + state.gantt.length + ') — setiap dispatch juga memicu modul Memory.';
+    }
+    return 'Selesai (' + state.gantt.length + '/' + state.gantt.length + '). Tekan Compare All untuk membandingkan algoritma, atau Reset untuk mengulang.';
+  }
+
   // ---------- Aksi ----------
 
   function pilihAlgoritma(a) {
     state.algorithm = a;
     recalc('algoritma diganti ke ' + a);
+    state.status = state.error ? null : { kind: 'info', text: 'Algoritma diganti ke ' + a + '. ' + (ALGO_DESC[a] || '') };
     render();
   }
 
   function muatData() {
     recalc('data dimuat');
+    state.status = state.error ? null : {
+      kind: 'ok',
+      text: 'Data dimuat: ' + state.processes.length + ' proses (' + state.gantt.length + ' langkah Gantt).'
+    };
     render();
   }
 
-    function dispatch() {
+  function dispatch() {
     var total = state.gantt.length;
     if (total === 0) {
+      state.status = { kind: 'warn', text: 'Tidak ada proses untuk di-dispatch. Periksa input lalu tekan Load Data.' };
       log('tidak ada proses untuk di-dispatch');
+      render();
       return;
     }
     if (state.pointer >= total) {
+      state.status = { kind: 'info', text: 'Semua proses sudah selesai di-dispatch. Tekan Reset untuk mengulang.' };
       log('semua proses selesai');
+      render();
       return;
     }
     var g = state.gantt[state.pointer];
     state.pointer++;
+    state.status = { kind: 'ok', text: 'Dispatch ' + g.pid + ' (t=' + g.start + '–' + g.end + ') dikirim ke Memory.' };
 
     // Urutan wajib: kirim event DULU, baru kirimLog.
     // Dikirim walaupun modul lain belum dibuka (event tanpa pendengar tidak berbahaya).
@@ -208,9 +233,64 @@
     return { terakhir: terakhir, dijalankan: dijalankan };
   }
 
+  function buildHelp() {
+    var panel = el('div', 'app-help');
+    var sections = [
+      ['Modul ini untuk apa?', [
+        'Scheduler (CPU) menentukan urutan proses yang mendapat giliran CPU menggunakan algoritma FCFS, SJF, atau Round Robin (RR).'
+      ]],
+      ['Cara pakai', [
+        '1. Pilih algoritma: FCFS, SJF, atau RR. Khusus RR, atur nilai Quantum (time slice).',
+        '2. Ubah proses di kolom input dengan format Nama:Burst atau Nama:Burst:Arrival (dipisah koma), lalu tekan Load Data atau Enter.',
+        '3. Tekan Dispatch untuk menjalankan satu blok Gantt.',
+        '4. Tekan Compare All untuk membandingkan Avg Waiting dan Avg Turnaround ketiga algoritma.'
+      ]],
+      ['Keterkaitan dengan modul lain', [
+        'Setiap klik Dispatch mengirim event os:dispatch ke modul Memory (memajukan 1 referensi page) serta tercatat di System Monitor dan Analytics.'
+      ]],
+      ['Arti tampilan', [
+        'Tabel Antrean: menampilkan PID, Arrival, Burst, Sisa burst, dan Status tiap proses.',
+        'Gantt: urutan blok eksekusi proses; arahkan kursor ke blok untuk melihat rentang waktunya.',
+        'Compare All: tanda ✓ menandai algoritma dengan rata-rata waktu tunggu (Avg Waiting) terkecil.'
+      ]]
+    ];
+    sections.forEach(function (s) {
+      panel.appendChild(el('div', 'app-help-h', s[0]));
+      s[1].forEach(function (line) { panel.appendChild(el('p', 'app-help-p', line)); });
+    });
+    var backBtn = el('button', 'btn-primary', 'Kembali ke simulasi');
+    backBtn.type = 'button';
+    backBtn.title = 'Tutup bantuan';
+    backBtn.addEventListener('click', guard(function () {
+      state.helpOpen = false;
+      render();
+    }));
+    panel.appendChild(backBtn);
+    return panel;
+  }
+
   function render() {
     if (!container) return;
     container.textContent = '';
+
+    if (state.helpOpen) {
+      container.appendChild(buildHelp());
+      return;
+    }
+
+    // --- Petunjuk langkah + tombol bantuan ---
+    var topbar = el('div', 'app-topbar');
+    topbar.appendChild(el('div', 'app-hint', hintText()));
+    var helpBtn = el('button', 'app-help-btn', '?');
+    helpBtn.type = 'button';
+    helpBtn.title = 'Bantuan: cara memakai modul ini';
+    helpBtn.setAttribute('aria-label', 'Bantuan');
+    helpBtn.addEventListener('click', guard(function () {
+      state.helpOpen = true;
+      render();
+    }));
+    topbar.appendChild(helpBtn);
+    container.appendChild(topbar);
 
     // --- Algoritma + quantum ---
     var secAlgo = el('div', 'app-section');
@@ -218,6 +298,8 @@
     var rowAlgo = el('div', 'app-row cpu-row');
     ALGORITMA.forEach(function (a) {
       var b = el('button', 'btn-algo' + (state.algorithm === a ? ' active' : ''), a);
+      b.type = 'button';
+      b.title = ALGO_DESC[a] || '';
       b.addEventListener('click', guard(function () { pilihAlgoritma(a); }));
       rowAlgo.appendChild(b);
     });
@@ -232,7 +314,7 @@
       rowAlgo.appendChild(q);
     }
     secAlgo.appendChild(rowAlgo);
-    secAlgo.appendChild(el('div', 'cpu-note', ALGO_DESC[state.algorithm] || ''));
+    secAlgo.appendChild(el('div', 'app-desc', ALGO_DESC[state.algorithm] || ''));
     container.appendChild(secAlgo);
 
     // --- Input proses ---
@@ -246,6 +328,8 @@
     inp.addEventListener('keydown', guard(function (ev) { if (ev.key === 'Enter') muatData(); }));
     rowIn.appendChild(inp);
     var btnLoad = el('button', 'btn-secondary', 'Load Data');
+    btnLoad.type = 'button';
+    btnLoad.title = 'Muat ulang daftar proses dari kolom input (atau tekan Enter)';
     btnLoad.addEventListener('click', guard(muatData));
     rowIn.appendChild(btnLoad);
     secIn.appendChild(rowIn);
@@ -308,16 +392,27 @@
     }
     container.appendChild(secG);
 
+    // --- Status aksi terakhir ---
+    if (state.status && state.status.text) {
+      container.appendChild(el('div', 'app-status app-status-' + state.status.kind, state.status.text));
+    }
+
     // --- Tombol aksi ---
     var secBtn = el('div', 'app-section app-row cpu-row');
     var bDisp = el('button', 'btn-primary', 'Dispatch');
+    bDisp.type = 'button';
+    bDisp.title = 'Jalankan satu langkah Gantt dan kirim os:dispatch ke Memory';
     bDisp.disabled = state.gantt.length === 0;
     bDisp.addEventListener('click', guard(dispatch));
     secBtn.appendChild(bDisp);
     var bReset = el('button', 'btn-secondary', 'Reset');
+    bReset.type = 'button';
+    bReset.title = 'Kembalikan seluruh simulasi ke kondisi awal';
     bReset.addEventListener('click', guard(tekanReset));
     secBtn.appendChild(bReset);
     var bCmp = el('button', 'btn-secondary', 'Compare All');
+    bCmp.type = 'button';
+    bCmp.title = 'Bandingkan Avg Waiting dan Avg Turnaround untuk FCFS, SJF, dan RR';
     bCmp.addEventListener('click', guard(compareAll));
     secBtn.appendChild(bCmp);
     secBtn.appendChild(el('div', 'cpu-spacer'));

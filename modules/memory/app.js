@@ -32,7 +32,9 @@
     error: null,
     exhausted: false,
     compareOpen: false,
-    compareResult: null
+    compareResult: null,
+    status: null,
+    helpOpen: false
   };
 
   // ---------- util ----------
@@ -114,7 +116,22 @@
     state.algorithm = DEFAULTS.algorithm;
     state.frameCap = DEFAULTS.frameCap;
     state.refsText = DEFAULTS.refsText;
+    state.status = null;
+    state.helpOpen = false;
     rebuild();
+  }
+
+  function hintText() {
+    if (state.error) {
+      return 'Perbaiki nilai Frame (1–10) atau RefString (angka >= 0 dipisah koma).';
+    }
+    if (state.pointer === 0) {
+      return 'Langkah 1: pilih algoritma & atur Frame/RefString, lalu tekan Next Reference (atau Dispatch di CPU).';
+    }
+    if (state.pointer < state.steps.length) {
+      return 'Langkah 2: tekan Next Reference lagi (' + state.pointer + '/' + state.steps.length + '). Page fault otomatis masuk ke antrean Disk.';
+    }
+    return 'Selesai (' + state.steps.length + '/' + state.steps.length + '). Tekan Compare All untuk membandingkan algoritma, atau Reset untuk mengulang.';
   }
 
   // Maju satu referensi.
@@ -153,6 +170,14 @@
     if (state.pointer >= state.steps.length && !state.exhausted) {
       state.exhausted = true;
       window.kirimLog('Memory', 'referensi habis');
+    }
+
+    var src = (pid && pid !== '-') ? ' (' + pid + ' dari CPU)' : '';
+    if (step.fault) {
+      var evTxt = (step.evicted !== null && step.evicted !== undefined) ? ' (ganti pg ' + step.evicted + ')' : '';
+      state.status = { kind: 'warn', text: 'Ref ' + step.ref + src + ': PAGE FAULT' + evTxt + ' — dikirim ke Disk.' };
+    } else {
+      state.status = { kind: 'ok', text: 'Ref ' + step.ref + src + ': HIT (sudah ada di frame).' };
     }
 
     return step;
@@ -240,9 +265,81 @@
     return box;
   }
 
+  function buildHelp() {
+    var panel = document.createElement('div');
+    panel.className = 'app-help';
+    var sections = [
+      ['Modul ini untuk apa?', [
+        'Memory Manager mensimulasikan alokasi frame RAM dan page replacement memakai algoritma FIFO, LRU, atau OPTIMAL.'
+      ]],
+      ['Cara pakai', [
+        '1. Pilih algoritma: FIFO, LRU, atau OPTIMAL.',
+        '2. Atur jumlah Frame (1–10) dan urutan halaman pada RefString (angka dipisah koma).',
+        '3. Tekan Next Reference untuk memproses satu halaman, atau jalankan Dispatch dari modul CPU.',
+        '4. Tekan Compare All untuk membandingkan total Page Fault dan Hit Ratio ketiga algoritma.'
+      ]],
+      ['Keterkaitan dengan modul lain', [
+        'Setiap klik Dispatch di modul CPU otomatis memajukan 1 langkah di Memory.',
+        'Setiap terjadi PAGE FAULT, Memory mengirim request silinder (page × 10) ke antrean modul Disk.'
+      ]],
+      ['Arti tampilan', [
+        'Kotak Frame: isi halaman yang sedang tersimpan di RAM saat ini.',
+        'HIT: halaman sudah ada di frame. FAULT: halaman belum ada sehingga perlu dimuat (mengganti halaman lain bila frame penuh).'
+      ]]
+    ];
+    sections.forEach(function (s) {
+      var h = document.createElement('div');
+      h.className = 'app-help-h';
+      h.textContent = s[0];
+      panel.appendChild(h);
+      s[1].forEach(function (line) {
+        var p = document.createElement('p');
+        p.className = 'app-help-p';
+        p.textContent = line;
+        panel.appendChild(p);
+      });
+    });
+    var backBtn = document.createElement('button');
+    backBtn.type = 'button';
+    backBtn.className = 'btn-primary';
+    backBtn.title = 'Tutup bantuan';
+    backBtn.textContent = 'Kembali ke simulasi';
+    backBtn.addEventListener('click', function () {
+      state.helpOpen = false;
+      render();
+    });
+    panel.appendChild(backBtn);
+    return panel;
+  }
+
   function render() {
     if (!container) return;
     container.textContent = '';
+
+    if (state.helpOpen) {
+      container.appendChild(buildHelp());
+      return;
+    }
+
+    // ----- Petunjuk langkah + tombol bantuan -----
+    var topbar = document.createElement('div');
+    topbar.className = 'app-topbar';
+    var hintEl = document.createElement('div');
+    hintEl.className = 'app-hint';
+    hintEl.textContent = hintText();
+    topbar.appendChild(hintEl);
+    var helpBtn = document.createElement('button');
+    helpBtn.type = 'button';
+    helpBtn.className = 'app-help-btn';
+    helpBtn.textContent = '?';
+    helpBtn.title = 'Bantuan: cara memakai modul ini';
+    helpBtn.setAttribute('aria-label', 'Bantuan');
+    helpBtn.addEventListener('click', function () {
+      state.helpOpen = true;
+      render();
+    });
+    topbar.appendChild(helpBtn);
+    container.appendChild(topbar);
 
     // ----- Pilihan algoritma -----
     var algoSection = document.createElement('div');
@@ -260,11 +357,13 @@
       btn.type = 'button';
       btn.className = 'btn-algo' + (state.algorithm === a ? ' active' : '');
       btn.textContent = a;
+      btn.title = ALGO_DESC[a] || '';
       btn.addEventListener('click', function () {
         if (state.algorithm !== a) {
           state.algorithm = a;
           window.kirimLog('Memory', 'algoritma → ' + a);
         }
+        state.status = { kind: 'info', text: 'Algoritma diganti ke ' + a + '.' };
         rebuild();
         render();
       });
@@ -272,7 +371,7 @@
     });
     algoSection.appendChild(algoRow);
     var descEl = document.createElement('div');
-    descEl.className = 'mem-desc';
+    descEl.className = 'app-desc';
     descEl.textContent = ALGO_DESC[state.algorithm] || '';
     algoSection.appendChild(descEl);
     container.appendChild(algoSection);
@@ -380,6 +479,13 @@
 
     container.appendChild(frameSection);
 
+    if (state.status && state.status.text) {
+      var statusEl = document.createElement('div');
+      statusEl.className = 'app-status app-status-' + state.status.kind;
+      statusEl.textContent = state.status.text;
+      container.appendChild(statusEl);
+    }
+
     // ----- Counter + tombol -----
     var ctrl = document.createElement('div');
     ctrl.className = 'app-section mem-controls';
@@ -399,6 +505,7 @@
     var resetBtn = document.createElement('button');
     resetBtn.type = 'button';
     resetBtn.className = 'btn-secondary';
+    resetBtn.title = 'Kembalikan seluruh simulasi ke kondisi awal';
     resetBtn.textContent = 'Reset';
     resetBtn.addEventListener('click', function () {
       if (window.OS && typeof window.OS.reset === 'function') {
@@ -413,12 +520,14 @@
     var nextBtn = document.createElement('button');
     nextBtn.type = 'button';
     nextBtn.className = 'btn-primary';
+    nextBtn.title = 'Proses satu referensi halaman berikutnya';
     nextBtn.textContent = 'Next Reference';
     if (state.error || state.steps.length === 0) {
       nextBtn.disabled = true;
     }
     nextBtn.addEventListener('click', function () {
-      advance('-');
+      var s = advance('-');
+      if (!s) state.status = { kind: 'info', text: 'Semua referensi sudah habis. Tekan Reset untuk mengulang.' };
       render();
     });
     ctrl.appendChild(nextBtn);
@@ -426,6 +535,7 @@
     var compareBtn = document.createElement('button');
     compareBtn.type = 'button';
     compareBtn.className = 'btn-secondary';
+    compareBtn.title = 'Bandingkan jumlah Page Fault & Hit Ratio untuk FIFO, LRU, dan OPTIMAL';
     compareBtn.textContent = 'Compare All';
     if (state.refs.length === 0) compareBtn.disabled = true;
     compareBtn.addEventListener('click', function () {

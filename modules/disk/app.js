@@ -74,6 +74,7 @@
 
   function button(cls, label, tip, handler) {
     var b = el('button', cls, label);
+    b.type = 'button';
     if (tip) b.title = tip;
     b.addEventListener('click', safe(handler));
     return b;
@@ -116,28 +117,28 @@
   }
 
   function buildMain(root) {
-    // Petunjuk langkah
-    root.appendChild(el('div', 'disk-hint', hintText()));
-
-    // Pilihan algoritma + penjelasan singkat
-    var secAlgo = el('div', 'app-section');
-    var rowAlgoHead = el('div', 'disk-algo-head');
-    rowAlgoHead.appendChild(el('div', 'app-label', 'Algoritma:'));
-    var help = button('disk-help-btn' + (state.helpOpen ? ' disk-active' : ''), '?',
+    // Petunjuk langkah + tombol bantuan
+    var topbar = el('div', 'app-topbar');
+    topbar.appendChild(el('div', 'app-hint', hintText()));
+    var help = button('app-help-btn' + (state.helpOpen ? ' active' : ''), '?',
       state.helpOpen ? 'Tutup bantuan' : 'Bantuan: cara memakai modul ini', function () {
         state.helpOpen = !state.helpOpen;
         render();
       });
     help.setAttribute('aria-label', 'Bantuan');
-    rowAlgoHead.appendChild(help);
-    secAlgo.appendChild(rowAlgoHead);
+    topbar.appendChild(help);
+    root.appendChild(topbar);
+
+    // Pilihan algoritma + penjelasan singkat
+    var secAlgo = el('div', 'app-section');
+    secAlgo.appendChild(el('div', 'app-label', 'Algoritma:'));
     var rowAlgo = el('div', 'app-row');
     ALGOS.forEach(function (a) {
       rowAlgo.appendChild(button('btn-algo' + (state.algorithm === a ? ' active' : ''), a,
         ALGO_DESC[a], function () { setAlgorithm(a); }));
     });
     secAlgo.appendChild(rowAlgo);
-    secAlgo.appendChild(el('div', 'disk-desc', ALGO_DESC[state.algorithm]));
+    secAlgo.appendChild(el('div', 'app-desc', ALGO_DESC[state.algorithm]));
 
     // Arah: hanya berlaku untuk SCAN
     if (state.algorithm === 'SCAN') {
@@ -276,7 +277,7 @@
     root.appendChild(secIn);
 
     // Pesan hasil aksi terakhir (selalu terlihat agar pengguna tahu apa yang terjadi)
-    if (state.status.text) root.appendChild(el('div', 'disk-status disk-status-' + state.status.kind, state.status.text));
+    if (state.status.text) root.appendChild(el('div', 'app-status app-status-' + state.status.kind, state.status.text));
 
     // Tombol utama
     root.appendChild(button('btn-primary disk-service', 'Service Next',
@@ -293,7 +294,7 @@
 
   // Panel bantuan (tombol ?)
   function buildHelp() {
-    var panel = el('div', 'disk-help');
+    var panel = el('div', 'app-help');
     var sections = [
       ['Modul ini untuk apa?', [
         'Disk punya "head" yang harus bergeser ke nomor silinder (0-199) untuk mengambil data. Geserannya disebut seek.',
@@ -327,8 +328,8 @@
       ]]
     ];
     sections.forEach(function (s) {
-      panel.appendChild(el('div', 'disk-help-h', s[0]));
-      s[1].forEach(function (line) { panel.appendChild(el('p', 'disk-help-p', line)); });
+      panel.appendChild(el('div', 'app-help-h', s[0]));
+      s[1].forEach(function (line) { panel.appendChild(el('p', 'app-help-p', line)); });
     });
     panel.appendChild(button('btn-primary', 'Kembali ke simulasi', 'Tutup bantuan', function () {
       state.helpOpen = false;
@@ -352,8 +353,8 @@
       queue = CLASSIC_QUEUE;
       label = 'Contoh klasik (antrean Anda masih kosong): head ' + head + ', antrean ' + queue.join(', ') + '. Isi antrean sendiri untuk membandingkan data Anda.';
     } else {
-      sec.appendChild(el('div', 'disk-status disk-status-info',
-        'Antrean masih kosong, jadi belum ada yang bisa dibandingkan. Isi antrean dulu (ketik angka atau klik lintasan), atau lihat contoh klasik.'));
+      sec.appendChild(el('div', 'app-status app-status-info',
+        'Antrean masih kosong, jadi belum ada yang bisa dibandingkan. Isi antrean dulu (ketik angka atau lewat Memory), atau lihat contoh klasik.'));
       sec.appendChild(button('btn-secondary', 'Lihat contoh klasik', 'Bandingkan memakai data contoh buku teks', function () {
         state.compareSample = true;
         render();
@@ -380,7 +381,7 @@
         algorithm: v.algo, head: head, maxCylinder: MAX_CYL, direction: v.dir, queue: queue
       });
       if (!r.ok) {
-        sec.appendChild(el('div', 'disk-status disk-status-warn', r.error.message));
+        sec.appendChild(el('div', 'app-status app-status-warn', r.error.message));
         return sec;
       }
       results.push({

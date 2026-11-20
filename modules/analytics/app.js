@@ -90,6 +90,7 @@
   // ------------------------------------------------------------------
   var container = null;   // elemen jendela saat terbuka, null saat tertutup
   var events = [];        // rekaman event untuk timeline, diisi listener os:* di bawah
+  var helpOpen = false;
 
   function log(msg) {
     if (typeof window.kirimLog === 'function') window.kirimLog('Analytics', msg);
@@ -410,6 +411,7 @@
     btnRefresh.type = 'button';
     btnRefresh.className = 'btn-secondary';
     btnRefresh.setAttribute('data-anal-action', 'refresh');
+    btnRefresh.title = 'Hitung dan gambar ulang grafik ini';
     btnRefresh.textContent = 'Refresh';
     btnRefresh.addEventListener('click', function () {
       try {
@@ -422,6 +424,7 @@
     btnDl.type = 'button';
     btnDl.className = 'btn-secondary';
     btnDl.setAttribute('data-anal-action', 'download');
+    btnDl.title = 'Simpan grafik ini sebagai file gambar SVG';
     btnDl.textContent = 'Unduh SVG';
     btnDl.addEventListener('click', function () {
       try { downloadSvg(spec.key); } catch (e) { log('error ekspor SVG: ' + e.message); }
@@ -440,12 +443,88 @@
     return card;
   }
 
+  function hintText() {
+    if (events.length === 0) {
+      return 'Analytics membandingkan algoritma CPU, Memory, dan Disk secara visual. Jalankan Dispatch di CPU untuk mengisi grafik Timeline Event.';
+    }
+    return 'Analytics menampilkan perbandingan algoritma dengan data standar serta Timeline Event real-time (' + events.length + ' event terekam).';
+  }
+
+  function buildHelp() {
+    var panel = document.createElement('div');
+    panel.className = 'app-help';
+    var sections = [
+      ['Modul ini untuk apa?', [
+        'Analytics menyajikan grafik perbandingan algoritma (CPU Scheduler, Memory Manager, Disk Scheduler) serta Timeline Event kumulatif sepanjang simulasi.'
+      ]],
+      ['Cara pakai', [
+        '1. Tiga grafik pertama otomatis menghitung dan membandingkan algoritma memakai dataset contoh standar.',
+        '2. Grafik Timeline Event terisi otomatis secara real-time saat Anda menjalankan simulasi di CPU, Memory, dan Disk.',
+        '3. Tekan Refresh pada kartu grafik untuk menggambar ulang, atau Unduh SVG untuk menyimpan grafik sebagai gambar.'
+      ]],
+      ['Arti grafik', [
+        'Batang hijau menandai algoritma dengan performa terbaik pada metrik yang dibandingkan.',
+        'Timeline Event menunjukkan jumlah kumulatif event Dispatch, Page Fault, dan Disk Served pada setiap tick.'
+      ]]
+    ];
+    sections.forEach(function (s) {
+      var h = document.createElement('div');
+      h.className = 'app-help-h';
+      h.textContent = s[0];
+      panel.appendChild(h);
+      s[1].forEach(function (line) {
+        var p = document.createElement('p');
+        p.className = 'app-help-p';
+        p.textContent = line;
+        panel.appendChild(p);
+      });
+    });
+    var backBtn = document.createElement('button');
+    backBtn.type = 'button';
+    backBtn.className = 'btn-primary';
+    backBtn.title = 'Tutup bantuan';
+    backBtn.textContent = 'Kembali ke grafik';
+    backBtn.addEventListener('click', function () {
+      helpOpen = false;
+      render();
+    });
+    panel.appendChild(backBtn);
+    return panel;
+  }
+
   // Gambar ulang dari state modul (state disimpan di variabel modul, bukan di DOM).
   function render() {
     if (!container) return;
     container.textContent = '';
     var root = document.createElement('div');
     root.className = 'anal-root';
+
+    if (helpOpen) {
+      root.appendChild(buildHelp());
+      container.appendChild(root);
+      return;
+    }
+
+    var topbar = document.createElement('div');
+    topbar.className = 'app-topbar';
+    var hintEl = document.createElement('div');
+    hintEl.className = 'app-hint';
+    hintEl.setAttribute('data-anal-hint', '1');
+    hintEl.textContent = hintText();
+    topbar.appendChild(hintEl);
+    var helpBtn = document.createElement('button');
+    helpBtn.type = 'button';
+    helpBtn.className = 'app-help-btn';
+    helpBtn.textContent = '?';
+    helpBtn.title = 'Bantuan: cara membaca grafik Analytics';
+    helpBtn.setAttribute('aria-label', 'Bantuan');
+    helpBtn.addEventListener('click', function () {
+      helpOpen = true;
+      render();
+    });
+    topbar.appendChild(helpBtn);
+    root.appendChild(topbar);
+
     SPECS.forEach(function (spec) { root.appendChild(buildCard(spec)); });
     container.appendChild(root);
     SPECS.forEach(function (spec) { renderChart(spec.key); });
@@ -478,7 +557,11 @@
     window.addEventListener(name, function (e) {
       try {
         events.push({ name: name, tick: currentTick(), detail: copyDetail(e && e.detail) });
-        if (container) renderChart('timeline');   // render hanya bila jendela terbuka
+        if (container && !helpOpen) {
+          renderChart('timeline');   // render hanya bila jendela terbuka
+          var hintEl = container.querySelector('[data-anal-hint]');
+          if (hintEl) hintEl.textContent = hintText();
+        }
       } catch (err) {
         log('error saat merekam ' + name + ': ' + err.message);
       }
@@ -489,6 +572,7 @@
   window.addEventListener('os:reset', function () {
     try {
       events = [];
+      helpOpen = false;
       render();
     } catch (e) {
       log('error saat reset: ' + e.message);
