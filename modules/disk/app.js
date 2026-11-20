@@ -108,21 +108,6 @@
     var root = el('div', 'disk-root');
     container.appendChild(root);
 
-    // Header: judul di kiri, tombol bantuan (?) di ujung kanan atas
-    var header = el('div', 'disk-header');
-    var title = el('div', 'disk-title-wrap');
-    title.appendChild(el('div', 'disk-title', 'Disk Scheduling'));
-    title.appendChild(el('div', 'disk-subtitle', 'Simulasikan urutan layanan dan total perpindahan head.'));
-    header.appendChild(title);
-    var help = button('disk-help-btn' + (state.helpOpen ? ' disk-active' : ''), '?',
-      state.helpOpen ? 'Tutup bantuan' : 'Bantuan: cara memakai modul ini', function () {
-        state.helpOpen = !state.helpOpen;
-        render();
-      });
-    help.setAttribute('aria-label', 'Bantuan');
-    header.appendChild(help);
-    root.appendChild(header);
-
     if (state.helpOpen) {
       root.appendChild(buildHelp());
     } else {
@@ -136,7 +121,16 @@
 
     // Pilihan algoritma + penjelasan singkat
     var secAlgo = el('div', 'app-section');
-    secAlgo.appendChild(el('div', 'app-label', 'Algoritma (klik untuk memilih):'));
+    var rowAlgoHead = el('div', 'disk-algo-head');
+    rowAlgoHead.appendChild(el('div', 'app-label', 'Algoritma:'));
+    var help = button('disk-help-btn' + (state.helpOpen ? ' disk-active' : ''), '?',
+      state.helpOpen ? 'Tutup bantuan' : 'Bantuan: cara memakai modul ini', function () {
+        state.helpOpen = !state.helpOpen;
+        render();
+      });
+    help.setAttribute('aria-label', 'Bantuan');
+    rowAlgoHead.appendChild(help);
+    secAlgo.appendChild(rowAlgoHead);
     var rowAlgo = el('div', 'app-row');
     ALGOS.forEach(function (a) {
       rowAlgo.appendChild(button('btn-algo' + (state.algorithm === a ? ' active' : ''), a,

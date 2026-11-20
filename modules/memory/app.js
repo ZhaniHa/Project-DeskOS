@@ -5,6 +5,11 @@
   'use strict';
 
   var ALGOS = ['FIFO', 'LRU', 'OPTIMAL'];
+  var ALGO_DESC = {
+    FIFO: 'First-In, First-Out: mengorbankan page yang paling awal masuk ke memori.',
+    LRU: 'Least Recently Used: mengorbankan page yang paling lama tidak digunakan.',
+    OPTIMAL: 'Optimal: mengorbankan page yang tidak akan digunakan dalam waktu paling lama ke depan.'
+  };
   var DEFAULTS = {
     algorithm: 'FIFO',
     frameCap: 4,
@@ -266,6 +271,10 @@
       algoRow.appendChild(btn);
     });
     algoSection.appendChild(algoRow);
+    var descEl = document.createElement('div');
+    descEl.className = 'mem-desc';
+    descEl.textContent = ALGO_DESC[state.algorithm] || '';
+    algoSection.appendChild(descEl);
     container.appendChild(algoSection);
 
     // ----- Input frames & refString -----

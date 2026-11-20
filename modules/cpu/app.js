@@ -3,6 +3,11 @@
   'use strict';
 
   var ALGORITMA = ['FCFS', 'SJF', 'RR'];
+  var ALGO_DESC = {
+    FCFS: 'First-Come, First-Served: proses dilayani sesuai urutan kedatangan. Non-preemptive.',
+    SJF: 'Shortest Job First: proses dengan burst terpendek didahulukan. Non-preemptive.',
+    RR: 'Round Robin: proses berjalan bergiliran dibatasi oleh kuantum waktu (time slice).'
+  };
   var DEFAULT_INPUT = 'P1:6, P2:3, P3:8, P4:2';
   var WARNA = ['#0ea5e9', '#8b5cf6', '#f59e0b', '#ef4444', '#10b981', '#ec4899', '#14b8a6', '#6366f1'];
 
@@ -227,6 +232,7 @@
       rowAlgo.appendChild(q);
     }
     secAlgo.appendChild(rowAlgo);
+    secAlgo.appendChild(el('div', 'cpu-note', ALGO_DESC[state.algorithm] || ''));
     container.appendChild(secAlgo);
 
     // --- Input proses ---

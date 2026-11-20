@@ -94,3 +94,10 @@
   font-size: 11px;
   color: #64748b;
 }
+
+.mem-desc {
+  margin-top: 6px;
+  font-size: 11px;
+  font-style: italic;
+  color: #64748b;
+}
