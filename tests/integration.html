@@ -65,23 +65,25 @@ async function run() {
   await step('2. Reset: tick 0, metrik 0, state memory dan disk kosong', async () => {
     w.OS.reset(); await wait(100);
     expectEq([w.OS.tick, w.OS.metrics], [0, { dispatch: 0, faults: 0, diskOps: 0 }], 'tick dan metrik');
+    expectEq(w.OS.getState('scheduler').algorithm, 'RR', 'scheduler.algorithm');
+    expectEq(w.OS.getState('memory').algorithm, 'LRU', 'memory.algorithm');
     expectEq(w.OS.getState('memory').pointer, 0, 'memory.pointer');
     expectEq(w.OS.getState('disk').queue, [], 'disk.queue');
   });
 
-  await step('3. 13 dispatch: 7 fault dengan page [7,0,1,2,3,4,0]', async () => {
+  await step('3. 13 dispatch: 6 fault dengan page [7,0,1,2,3,4]', async () => {
     faultEvents.length = 0;
     for (let i = 0; i < 13; i++) dispatchOs(PIDS[i % 4], i);
     await wait(100);
-    expectEq([w.OS.metrics.dispatch, w.OS.metrics.faults], [13, 7], '(dispatch,faults)');
-    expectEq(faultEvents.map(e => e.page), [7, 0, 1, 2, 3, 4, 0], 'page pada os:page-fault');
+    expectEq([w.OS.metrics.dispatch, w.OS.metrics.faults], [13, 6], '(dispatch,faults)');
+    expectEq(faultEvents.map(e => e.page), [7, 0, 1, 2, 3, 4], 'page pada os:page-fault');
     expectEq(faultEvents[0].pid, 'P1', 'pid fault pertama');
   });
 
   await step('4. State memory dan disk setelah 13 dispatch', async () => {
     const m = w.OS.getState('memory'), d = w.OS.getState('disk');
-    expectEq([m.pointer, m.faults, m.hits, m.frames], [13, 7, 6, [2, 3, 4, 0]], 'memory (pointer,faults,hits,frames)');
-    expectEq([d.queue, d.head], [[70, 0, 10, 20, 30, 40, 0], 53], 'disk (queue,head)');
+    expectEq([m.pointer, m.faults, m.hits, m.frames], [13, 6, 7, [0, 2, 3, 4]], 'memory (pointer,faults,hits,frames)');
+    expectEq([d.queue, d.head], [[70, 0, 10, 20, 30, 40], 53], 'disk (queue,head)');
   });
 
   await step('5. Service Next sekali: os:disk-served page 7, seek 17', async () => {
@@ -94,7 +96,7 @@ async function run() {
     expectEq(servedEvents, [{ pid: 'P1', page: 7, target: 70, seek: 17 }], 'os:disk-served');
     expectEq([w.OS.metrics.diskOps, w.OS.tick], [1, 14], '(diskOps,tick)');
     const d = w.OS.getState('disk');
-    expectEq([d.head, d.totalSeek, d.queue], [70, 17, [0, 10, 20, 30, 40, 0]], 'disk (head,totalSeek,queue)');
+    expectEq([d.head, d.totalSeek, d.queue], [70, 17, [0, 10, 20, 30, 40]], 'disk (head,totalSeek,queue)');
   });
 
   await step('6. Jendela Memory ditutup: alur event tetap berjalan', async () => {

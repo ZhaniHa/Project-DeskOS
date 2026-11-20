@@ -11,7 +11,7 @@
     OPTIMAL: 'Optimal: mengorbankan page yang tidak akan digunakan dalam waktu paling lama ke depan.'
   };
   var DEFAULTS = {
-    algorithm: 'FIFO',
+    algorithm: 'LRU',
     frameCap: 4,
     refsText: '7,0,1,2,0,3,0,4,2,3,0,3,2'
   };
@@ -129,7 +129,7 @@
       return 'Langkah 1: pilih algoritma & atur Frame/RefString, lalu tekan Next Reference (atau Dispatch di CPU).';
     }
     if (state.pointer < state.steps.length) {
-      return 'Langkah 2: tekan Next Reference lagi (' + state.pointer + '/' + state.steps.length + '). Page fault otomatis masuk ke antrean Disk.';
+      return 'Sedang berjalan: ' + state.pointer + ' dari ' + state.steps.length + ' referensi diproses. Tekan Next Reference lagi. Page fault otomatis masuk ke antrean Disk.';
     }
     return 'Selesai (' + state.steps.length + '/' + state.steps.length + '). Tekan Compare All untuk membandingkan algoritma, atau Reset untuk mengulang.';
   }
@@ -595,8 +595,8 @@
   window.registerApp({
     id: 'memory',
     title: 'Memory (Page Replacement)',
-    width: 560,
-    height: 420,
+    width: 600,
+    height: 560,
     icon:
       '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" ' +
       'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +

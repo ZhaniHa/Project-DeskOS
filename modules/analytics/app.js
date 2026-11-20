@@ -91,6 +91,7 @@
   var container = null;   // elemen jendela saat terbuka, null saat tertutup
   var events = [];        // rekaman event untuk timeline, diisi listener os:* di bawah
   var helpOpen = false;
+  var MAX_EVENTS = 500;
 
   function log(msg) {
     if (typeof window.kirimLog === 'function') window.kirimLog('Analytics', msg);
@@ -557,6 +558,7 @@
     window.addEventListener(name, function (e) {
       try {
         events.push({ name: name, tick: currentTick(), detail: copyDetail(e && e.detail) });
+        if (events.length > MAX_EVENTS) events.shift();
         if (container && !helpOpen) {
           renderChart('timeline');   // render hanya bila jendela terbuka
           var hintEl = container.querySelector('[data-anal-hint]');
@@ -582,8 +584,8 @@
   window.registerApp({
     id: 'analytics',
     title: 'Analytics',
-    width: 560,
-    height: 420,
+    width: 720,
+    height: 640,
     color: '#0ea5e9',
     icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="20" y2="20"></line><rect x="6" y="11" width="3" height="9"></rect><rect x="11" y="5" width="3" height="15"></rect><rect x="16" y="14" width="3" height="6"></rect></svg>',
     mount: function (el) {

@@ -336,8 +336,8 @@
   window.registerApp({
     id: 'monitor',
     title: 'System Monitor',
-    width: 560,
-    height: 420,
+    width: 600,
+    height: 560,
     icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M7 21h10M12 17v4"></path><path d="m6 11 3-3 3 5 3-4 3 2"></path></svg>',
     mount: function (el) {
       container = el;
