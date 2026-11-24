@@ -1,4 +1,4 @@
-/* TEMPLATE modul MiniOS. Jangan diubah. Salin ke modules/<nama>/app.js, lalu ganti
+/* TEMPLATE modul DeskOS. Jangan diubah. Salin ke modules/<nama>/app.js, lalu ganti
    semua tanda __ID__, __TITLE__, dan __LABEL__ (contoh: cpu / Scheduler (CPU) / CPU). */
 (function () {
   'use strict';

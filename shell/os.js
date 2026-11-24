@@ -1,4 +1,4 @@
-/* MiniOS shell: API untuk modul (registerApp, kirimLog, OS) dan penghitung event.
+/* DeskOS shell: API untuk modul (registerApp, kirimLog, OS) dan penghitung event.
    Modul TIDAK boleh mengubah file ini. */
 (function () {
   'use strict';

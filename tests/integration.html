@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>MiniOS: Tes Integrasi</title>
+<title>DeskOS: Tes Integrasi</title>
 <style>
   body { font-family: system-ui, sans-serif; margin: 24px; color: #0f172a; }
   h1 { font-size: 20px; margin: 0 0 4px; }
@@ -17,7 +17,7 @@
 </style>
 </head>
 <body>
-<h1>MiniOS: Tes Integrasi (alur CPU → Memory → Disk lewat event)</h1>
+<h1>DeskOS: Tes Integrasi (alur CPU → Memory → Disk lewat event)</h1>
 <div>Jalankan lewat server lokal. Halaman ini memuat <code>../index.html</code> di iframe tersembunyi dan menjalankan skenario bagian 12.3 spesifikasi. Perluas skenario di bagian "TAMBAHKAN SKENARIO DI SINI" (tugas QA).</div>
 <div id="sum" class="sum">Menjalankan...</div>
 <table><thead><tr><th>#</th><th>Langkah</th><th>Hasil</th><th>Detail</th></tr></thead><tbody id="rows"></tbody></table>
@@ -49,8 +49,8 @@ function dispatchOs(pid, i) { w.dispatchEvent(new w.CustomEvent('os:dispatch', {
 const PIDS = ['P1', 'P2', 'P3', 'P4'];
 
 async function run() {
-  const booted = await until(() => frame.contentWindow && frame.contentWindow.OS && frame.contentWindow.OS.events.some(l => l.includes('MiniOS boot OK')), 8000);
-  if (!booted) { record('Boot MiniOS', 'FAIL', 'index.html tidak selesai boot dalam 8 detik'); return; }
+  const booted = await until(() => frame.contentWindow && frame.contentWindow.OS && frame.contentWindow.OS.events.some(l => l.includes('DeskOS boot OK')), 8000);
+  if (!booted) { record('Boot DeskOS', 'FAIL', 'index.html tidak selesai boot dalam 8 detik'); return; }
   w = frame.contentWindow;
   w.addEventListener('os:page-fault', e => faultEvents.push(e.detail));
   w.addEventListener('os:disk-served', e => servedEvents.push(e.detail));

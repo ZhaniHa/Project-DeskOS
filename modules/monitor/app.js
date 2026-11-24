@@ -68,8 +68,8 @@
         window.kirimLog('Monitor', 'gagal ekspor CSV: ' + hasil.error.message);
         return;
       }
-      unduh('minios-log.csv', hasil.result.csv, 'text/csv');
-      window.kirimLog('Monitor', 'ekspor minios-log.csv (' + events.length + ' event)');
+      unduh('deskos-log.csv', hasil.result.csv, 'text/csv');
+      window.kirimLog('Monitor', 'ekspor deskos-log.csv (' + events.length + ' event)');
     } catch (e) {
       window.kirimLog('Monitor', 'error saat ekspor CSV: ' + e.message);
     }
@@ -91,8 +91,8 @@
                  (ev.detail && ev.detail.pid) + ' ' + teksDetail(ev);
         }).join('\n');
       }
-      unduh('minios-log.txt', teks, 'text/plain');
-      window.kirimLog('Monitor', 'ekspor minios-log.txt');
+      unduh('deskos-log.txt', teks, 'text/plain');
+      window.kirimLog('Monitor', 'ekspor deskos-log.txt');
     } catch (e) {
       window.kirimLog('Monitor', 'error saat ekspor log: ' + e.message);
     }
@@ -224,7 +224,7 @@
     var panel = buat('div', 'app-help');
     var sections = [
       ['Modul ini untuk apa?', [
-        'System Monitor merekam event lintas modul (os:dispatch, os:page-fault, os:disk-served) dan menampilkan ringkasan performa MiniOS secara real-time.'
+        'System Monitor merekam event lintas modul (os:dispatch, os:page-fault, os:disk-served) dan menampilkan ringkasan performa DeskOS secara real-time.'
       ]],
       ['Cara pakai', [
         '1. Jalankan simulasi dari modul CPU (Dispatch), Memory (Next Reference), atau Disk (Service Next).',

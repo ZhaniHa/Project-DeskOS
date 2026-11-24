@@ -28,7 +28,7 @@
   }
 
   async function boot() {
-    window.kirimLog('Kernel', 'MiniOS boot');
+    window.kirimLog('Kernel', 'DeskOS boot');
     for (var i = 0; i < MODULES.length; i++) {
       var dir = 'modules/' + MODULES[i] + '/';
       await loadCss(dir + 'style.css');
@@ -37,7 +37,7 @@
         if (!ok) window.kirimLog('SISTEM', dir + SCRIPTS[j] + ' belum ada, dilewati');
       }
     }
-    window.kirimLog('Kernel', 'MiniOS boot OK');
+    window.kirimLog('Kernel', 'DeskOS boot OK');
     window.Shell.openApp('terminal');
   }
 

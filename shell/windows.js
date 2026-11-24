@@ -1,4 +1,4 @@
-/* MiniOS shell: window manager, taskbar, start menu, ikon desktop, tray. */
+/* DeskOS shell: window manager, taskbar, start menu, ikon desktop, tray. */
 (function () {
   'use strict';
 
