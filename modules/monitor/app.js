@@ -5,6 +5,8 @@
 
   var container = null;   // elemen jendela saat terbuka, null saat tertutup
   var events = [];        // rekaman event { name, tick, detail } (state modul, bukan di DOM)
+  var helpOpen = false;
+  var MAX_EVENTS = 500;
 
   // ---------- Pembantu DOM (semua teks lewat textContent) ----------
 
@@ -161,6 +163,9 @@
     });
     tabel.appendChild(tbody);
     sec.appendChild(tabel);
+    if (events.length === MAX_EVENTS) {
+      sec.appendChild(buat('div', 'app-label', 'Ringkasan dibatasi pada ' + MAX_EVENTS + ' event terbaru.'));
+    }
     return sec;
   }
 
@@ -198,6 +203,8 @@
     var b2 = buat('button', 'btn-secondary', 'Export Log');
     b1.type = 'button';
     b2.type = 'button';
+    b1.title = 'Unduh seluruh rekaman event dalam format CSV';
+    b2.title = 'Unduh log sistem dalam format teks (.txt)';
     b1.addEventListener('click', exportCsv);
     b2.addEventListener('click', exportLog);
     baris.appendChild(b1);
@@ -206,10 +213,69 @@
     return sec;
   }
 
+  function hintText() {
+    if (events.length === 0) {
+      return 'System Monitor merekam aktivitas CPU, Memory, dan Disk secara real-time. Jalankan Dispatch di CPU untuk mulai melihat data.';
+    }
+    return 'System Monitor aktif: ' + events.length + ' event terekam (' + Math.min(events.length, 15) + ' terbaru ditampilkan di tabel).';
+  }
+
+  function buildHelp() {
+    var panel = buat('div', 'app-help');
+    var sections = [
+      ['Modul ini untuk apa?', [
+        'System Monitor merekam event lintas modul (os:dispatch, os:page-fault, os:disk-served) dan menampilkan ringkasan performa MiniOS secara real-time.'
+      ]],
+      ['Cara pakai', [
+        '1. Jalankan simulasi dari modul CPU (Dispatch), Memory (Next Reference), atau Disk (Service Next).',
+        '2. Rekaman tetap berjalan meskipun jendela System Monitor sempat ditutup.',
+        '3. Gunakan Export CSV atau Export Log untuk mengunduh hasil rekaman simulasi.'
+      ]],
+      ['Arti metrik & tampilan', [
+        'Dispatch / Page Fault / Disk Ops: total kejadian sejak Reset terakhir.',
+        'Fault Rate: rasio Page Fault terhadap jumlah Dispatch.',
+        'Rata-rata Seek: rata-rata perpindahan head Disk per operasi layanan.',
+        'Per PID & 15 Event Terakhir: rincian beban tiap proses dan riwayat event terbaru.',
+        'Status Aplikasi: ringkasan state terkini dari modul CPU, Memory, dan Disk.'
+      ]]
+    ];
+    sections.forEach(function (s) {
+      panel.appendChild(buat('div', 'app-help-h', s[0]));
+      s[1].forEach(function (line) { panel.appendChild(buat('p', 'app-help-p', line)); });
+    });
+    var backBtn = buat('button', 'btn-primary', 'Kembali ke monitor');
+    backBtn.type = 'button';
+    backBtn.title = 'Tutup bantuan';
+    backBtn.addEventListener('click', function () {
+      helpOpen = false;
+      render();
+    });
+    panel.appendChild(backBtn);
+    return panel;
+  }
+
   // Gambar ulang dari state modul (state disimpan di variabel modul, bukan di DOM).
   function render() {
     if (!container) return;
     container.textContent = '';
+
+    if (helpOpen) {
+      container.appendChild(buildHelp());
+      return;
+    }
+
+    var topbar = buat('div', 'app-topbar');
+    topbar.appendChild(buat('div', 'app-hint', hintText()));
+    var helpBtn = buat('button', 'app-help-btn', '?');
+    helpBtn.type = 'button';
+    helpBtn.title = 'Bantuan: cara membaca System Monitor';
+    helpBtn.setAttribute('aria-label', 'Bantuan');
+    helpBtn.addEventListener('click', function () {
+      helpOpen = true;
+      render();
+    });
+    topbar.appendChild(helpBtn);
+    container.appendChild(topbar);
 
     var hasil = window.MonitorLogic.summarize(events);
     var ringkasan = hasil.ok ? hasil.result : {
@@ -243,6 +309,7 @@
           return;
         }
         events.push({ name: nama, tick: tickSekarang(), detail: detail });
+        if (events.length > MAX_EVENTS) events.shift();
         render();   // render() sendiri berhenti bila container === null
       } catch (err) {
         window.kirimLog('Monitor', 'error saat merekam ' + nama + ': ' + err.message);
@@ -259,6 +326,7 @@
   window.addEventListener('os:reset', function () {
     try {
       events = [];
+      helpOpen = false;
       render();
     } catch (e) {
       window.kirimLog('Monitor', 'error saat reset: ' + e.message);
@@ -268,9 +336,9 @@
   window.registerApp({
     id: 'monitor',
     title: 'System Monitor',
-    width: 560,
-    height: 420,
-    icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>',
+    width: 600,
+    height: 560,
+    icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M7 21h10M12 17v4"></path><path d="m6 11 3-3 3 5 3-4 3 2"></path></svg>',
     mount: function (el) {
       container = el;
       render();

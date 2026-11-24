@@ -1,24 +1,7 @@
 /* modules/disk/style.css : semua class berprefix .disk- */
 .disk-root { position: relative; }
 
-/* Header + tombol bantuan di ujung kanan atas */
-.disk-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-.disk-title-wrap { min-width: 0; }
-.disk-title { font-weight: 700; font-size: 14px; }
-.disk-subtitle { margin-top: 1px; color: #64748b; font-size: 10px; }
-.disk-help-btn {
-  width: 26px; height: 26px; padding: 0;
-  border: 2px solid #0ea5e9; border-radius: 50%;
-  background: #fff; color: #0ea5e9;
-  font-weight: 700; font-size: 14px; line-height: 1; cursor: pointer;
-}
-.disk-help-btn:hover, .disk-help-btn.disk-active { background: #0ea5e9; color: #fff; }
-
-.disk-hint {
-  margin-bottom: 8px; padding: 6px 8px; border-radius: 6px;
-  background: #e0f2fe; color: #075985; font-size: 12px;
-}
-.disk-desc, .disk-note { margin-top: 4px; font-size: 11px; color: #64748b; }
+.disk-note { margin-top: 4px; font-size: 11px; color: var(--muted); }
 .disk-dir-row { align-items: center; margin-top: 6px; }
 
 .disk-input {
@@ -64,13 +47,7 @@
 }
 .disk-del-btn:hover { background: #fee2e2; }
 
-/* Kotak pesan hasil aksi */
-.disk-status { margin: 6px 0; padding: 6px 8px; border-radius: 6px; font-size: 12px; }
-.disk-status-info { background: #e0f2fe; color: #075985; }
-.disk-status-ok   { background: #dcfce7; color: #166534; }
-.disk-status-warn { background: #fef3c7; color: #92400e; }
-
-.disk-active { outline: 2px solid #0ea5e9; }
+.disk-active { outline: 2px solid var(--primary); }
 
 /* Compare All */
 .disk-compare { border-top: 1px solid #e2e8f0; padding-top: 5px; }
@@ -79,8 +56,3 @@
 .disk-bar-wrap { min-width: 80px; height: 8px; border-radius: 4px; background: #e2e8f0; }
 .disk-bar { height: 8px; border-radius: 4px; background: #0ea5e9; }
 .disk-best .disk-bar { background: #16a34a; }
-
-/* Panel bantuan */
-.disk-help-h { margin: 7px 0 2px; font-weight: 700; font-size: 12px; color: #0369a1; }
-.disk-help-p { margin: 2px 0; font-size: 11px; line-height: 1.4; }
-.disk-help .btn-primary { margin-top: 8px; }
