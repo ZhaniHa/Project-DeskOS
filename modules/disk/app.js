@@ -57,6 +57,7 @@
     state.inputText = '';
     state.compare = false;
     state.compareSample = false;
+    state.helpOpen = false;
   }
 
   // Slider "head awal" hanya boleh diubah sebelum head pernah bergerak.
@@ -96,7 +97,7 @@
   // Petunjuk langkah berikutnya, supaya pengguna tahu harus menekan apa.
   function hintText() {
     var hasQ = state.queue.length > 0;
-    if (!hasQ && isIdle()) return 'Langkah 1: isi antrean. Ketik angka silinder lalu tekan Tambah, atau klik langsung pada lintasan.';
+    if (!hasQ && isIdle()) return 'Langkah 1: isi antrean. Ketik angka silinder lalu tekan Tambah, atau jalankan Dispatch di CPU hingga terjadi page fault.';
     if (hasQ && isIdle()) return 'Langkah 2: tekan Service Next untuk melayani satu request. Anda juga bisa menggeser slider Head awal dulu.';
     if (hasQ) return 'Tekan Service Next lagi sampai antrean habis.';
     return 'Selesai. Total seek: ' + state.totalSeek + '. Tekan Reset untuk mengulang, atau Compare All untuk membandingkan algoritma.';
@@ -532,7 +533,7 @@
 
     var r = res.result;
     if (r.done) {
-      setStatus('warn', 'Antrean kosong, belum ada yang dilayani. Tambahkan request dulu (ketik angka, klik lintasan, atau tunggu page fault dari Memory).');
+      setStatus('warn', 'Antrean kosong, belum ada yang dilayani. Tambahkan request dulu (ketik angka silinder lalu tekan Tambah, atau tunggu page fault dari Memory).');
       log('antrean kosong, tidak ada request untuk dilayani');
       render();
       return;
@@ -568,11 +569,11 @@
   window.addEventListener('os:page-fault', function (e) {
     try {
       var d = (e && e.detail) || {};
-      var cyl = Math.min(d.page * 10, MAX_CYL);
-      if (!Number.isInteger(cyl) || cyl < 0) {
+      if (!Number.isInteger(d.page) || d.page < 0) {
         log('page-fault diabaikan: page tidak valid');
         return;
       }
+      var cyl = Math.min(d.page * 10, MAX_CYL);
       if (state.queue.length >= MAX_QUEUE) {
         log('antrean penuh (' + MAX_QUEUE + '), request page ' + d.page + ' ditolak');
         return;

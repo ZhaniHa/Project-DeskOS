@@ -6,6 +6,7 @@
   var container = null;   // elemen jendela saat terbuka, null saat tertutup
   var events = [];        // rekaman event { name, tick, detail } (state modul, bukan di DOM)
   var helpOpen = false;
+  var sedangRender = false;
   var MAX_EVENTS = 500;
 
   // ---------- Pembantu DOM (semua teks lewat textContent) ----------
@@ -256,38 +257,43 @@
 
   // Gambar ulang dari state modul (state disimpan di variabel modul, bukan di DOM).
   function render() {
-    if (!container) return;
-    container.textContent = '';
+    if (!container || sedangRender) return;
+    sedangRender = true;
+    try {
+      container.textContent = '';
 
-    if (helpOpen) {
-      container.appendChild(buildHelp());
-      return;
+      if (helpOpen) {
+        container.appendChild(buildHelp());
+        return;
+      }
+
+      var topbar = buat('div', 'app-topbar');
+      topbar.appendChild(buat('div', 'app-hint', hintText()));
+      var helpBtn = buat('button', 'app-help-btn', '?');
+      helpBtn.type = 'button';
+      helpBtn.title = 'Bantuan: cara membaca System Monitor';
+      helpBtn.setAttribute('aria-label', 'Bantuan');
+      helpBtn.addEventListener('click', function () {
+        helpOpen = true;
+        render();
+      });
+      topbar.appendChild(helpBtn);
+      container.appendChild(topbar);
+
+      var hasil = window.MonitorLogic.summarize(events);
+      var ringkasan = hasil.ok ? hasil.result : {
+        counts: { dispatch: 0, faults: 0, diskOps: 0 },
+        faultRate: 0, avgSeek: 0, perPid: []
+      };
+
+      container.appendChild(bagianKartu(ringkasan));
+      container.appendChild(bagianPerPid(ringkasan));
+      container.appendChild(bagianEventTerakhir());
+      container.appendChild(bagianStatusAplikasi());
+      container.appendChild(bagianTombol());
+    } finally {
+      sedangRender = false;
     }
-
-    var topbar = buat('div', 'app-topbar');
-    topbar.appendChild(buat('div', 'app-hint', hintText()));
-    var helpBtn = buat('button', 'app-help-btn', '?');
-    helpBtn.type = 'button';
-    helpBtn.title = 'Bantuan: cara membaca System Monitor';
-    helpBtn.setAttribute('aria-label', 'Bantuan');
-    helpBtn.addEventListener('click', function () {
-      helpOpen = true;
-      render();
-    });
-    topbar.appendChild(helpBtn);
-    container.appendChild(topbar);
-
-    var hasil = window.MonitorLogic.summarize(events);
-    var ringkasan = hasil.ok ? hasil.result : {
-      counts: { dispatch: 0, faults: 0, diskOps: 0 },
-      faultRate: 0, avgSeek: 0, perPid: []
-    };
-
-    container.appendChild(bagianKartu(ringkasan));
-    container.appendChild(bagianPerPid(ringkasan));
-    container.appendChild(bagianEventTerakhir());
-    container.appendChild(bagianStatusAplikasi());
-    container.appendChild(bagianTombol());
   }
 
   // ---------- Perekaman event (Tahap 4) ----------
@@ -308,7 +314,15 @@
           window.kirimLog('Monitor', 'event ' + nama + ' diabaikan: pid bukan string');
           return;
         }
-        events.push({ name: nama, tick: tickSekarang(), detail: detail });
+        var tick = tickSekarang();
+        var entry = { name: nama, tick: tick, detail: detail };
+        var last = events.length > 0 ? events[events.length - 1] : null;
+        if (nama === 'os:dispatch' && last && last.name === 'os:page-fault' &&
+            last.tick === tick && last.detail && last.detail.pid === detail.pid) {
+          events.splice(events.length - 1, 0, entry);
+        } else {
+          events.push(entry);
+        }
         if (events.length > MAX_EVENTS) events.shift();
         render();   // render() sendiri berhenti bila container === null
       } catch (err) {
@@ -320,6 +334,9 @@
   rekam('os:dispatch');
   rekam('os:page-fault');
   rekam('os:disk-served');
+  window.addEventListener('os:log', function () {
+    if (container) render();
+  });
 
   // Listener event os:* didaftarkan SEKALI di sini (bukan di mount),
   // supaya tetap berjalan walaupun jendela modul sedang ditutup.

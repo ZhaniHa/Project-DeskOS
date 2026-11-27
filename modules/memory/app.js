@@ -23,7 +23,10 @@
   var state = {
     algorithm: DEFAULTS.algorithm,
     frameCap: DEFAULTS.frameCap,
+    frameText: String(DEFAULTS.frameCap),
+    loadedFrameText: String(DEFAULTS.frameCap),
     refsText: DEFAULTS.refsText,
+    loadedRefsText: DEFAULTS.refsText,
     refs: [],
     steps: [],
     pointer: 0,
@@ -74,6 +77,8 @@
 
   // Jalankan ulang simulasi dari input saat ini. true bila sukses.
   function rebuild() {
+    state.loadedFrameText = state.frameText;
+    state.loadedRefsText = state.refsText;
     state.error = null;
     state.compareOpen = false;
     state.compareResult = null;
@@ -83,6 +88,15 @@
       clearDisplay();
       return false;
     }
+
+    var fTrim = String(state.frameText).trim();
+    var fNum = /^\d+$/.test(fTrim) ? parseInt(fTrim, 10) : NaN;
+    if (isNaN(fNum) || fNum < 1 || fNum > 10) {
+      state.error = 'frames harus bilangan bulat antara 1 dan 10';
+      clearDisplay();
+      return false;
+    }
+    state.frameCap = fNum;
 
     var refs = parseRefsText(state.refsText);
     if (!refs) {
@@ -112,9 +126,18 @@
     return true;
   }
 
+  function syncInputs() {
+    if (state.frameText === state.loadedFrameText && state.refsText === state.loadedRefsText) {
+      return false;
+    }
+    rebuild();
+    return true;
+  }
+
   function resetState() {
     state.algorithm = DEFAULTS.algorithm;
     state.frameCap = DEFAULTS.frameCap;
+    state.frameText = String(DEFAULTS.frameCap);
     state.refsText = DEFAULTS.refsText;
     state.status = null;
     state.helpOpen = false;
@@ -376,6 +399,9 @@
     algoSection.appendChild(descEl);
     container.appendChild(algoSection);
 
+    var nextBtn = null;
+    var compareBtn = null;
+
     // ----- Input frames & refString -----
     var inputSection = document.createElement('div');
     inputSection.className = 'app-section';
@@ -390,19 +416,25 @@
     frameInput.type = 'number';
     frameInput.min = '1';
     frameInput.max = '10';
-    frameInput.value = String(state.frameCap);
+    frameInput.value = state.frameText;
     frameInput.className = 'mem-input mem-input-frame';
-    frameInput.addEventListener('change', function () {
-      var n = parseInt(frameInput.value, 10);
-      if (isNaN(n) || n < 1 || n > 10) {
-        state.error = 'frames harus bilangan bulat antara 1 dan 10';
-        clearDisplay();
+    frameInput.addEventListener('input', function () {
+      state.frameText = frameInput.value;
+      if (nextBtn) nextBtn.disabled = false;
+      if (compareBtn) compareBtn.disabled = false;
+    });
+    frameInput.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') {
+        state.frameText = frameInput.value;
+        rebuild();
         render();
-        return;
       }
-      state.frameCap = n;
-      rebuild();
-      render();
+    });
+    frameInput.addEventListener('blur', function (ev) {
+      state.frameText = frameInput.value;
+      var rel = ev && ev.relatedTarget;
+      if (rel && container && container.contains(rel) && rel.tagName === 'BUTTON') return;
+      if (syncInputs()) render();
     });
     frameLbl.appendChild(frameInput);
     inputRow.appendChild(frameLbl);
@@ -414,10 +446,23 @@
     refsInput.type = 'text';
     refsInput.value = state.refsText;
     refsInput.className = 'mem-input mem-input-refs';
-    refsInput.addEventListener('change', function () {
+    refsInput.addEventListener('input', function () {
       state.refsText = refsInput.value;
-      rebuild();
-      render();
+      if (nextBtn) nextBtn.disabled = false;
+      if (compareBtn) compareBtn.disabled = false;
+    });
+    refsInput.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') {
+        state.refsText = refsInput.value;
+        rebuild();
+        render();
+      }
+    });
+    refsInput.addEventListener('blur', function (ev) {
+      state.refsText = refsInput.value;
+      var rel = ev && ev.relatedTarget;
+      if (rel && container && container.contains(rel) && rel.tagName === 'BUTTON') return;
+      if (syncInputs()) render();
     });
     refsLbl.appendChild(refsInput);
     inputRow.appendChild(refsLbl);
@@ -492,10 +537,16 @@
 
     var counters = document.createElement('div');
     counters.className = 'app-label mem-counters';
-    counters.innerHTML =
-      'Page fault: <strong>' + state.faults + '</strong> · ' +
-      'Hit: <strong>' + state.hits + '</strong> · ' +
-      'Langkah: <strong>' + state.pointer + '</strong>/' + state.steps.length;
+    var addCounter = function (prefix, val, suffix) {
+      counters.appendChild(document.createTextNode(prefix));
+      var strong = document.createElement('strong');
+      strong.textContent = String(val);
+      counters.appendChild(strong);
+      if (suffix) counters.appendChild(document.createTextNode(suffix));
+    };
+    addCounter('Page fault: ', state.faults, ' · ');
+    addCounter('Hit: ', state.hits, ' · ');
+    addCounter('Langkah: ', state.pointer, '/' + state.steps.length);
     ctrl.appendChild(counters);
 
     var spacer = document.createElement('div');
@@ -517,28 +568,37 @@
     });
     ctrl.appendChild(resetBtn);
 
-    var nextBtn = document.createElement('button');
+    var dirtyMem = state.frameText !== state.loadedFrameText || state.refsText !== state.loadedRefsText;
+    nextBtn = document.createElement('button');
     nextBtn.type = 'button';
     nextBtn.className = 'btn-primary';
     nextBtn.title = 'Proses satu referensi halaman berikutnya';
     nextBtn.textContent = 'Next Reference';
-    if (state.error || state.steps.length === 0) {
+    if (!dirtyMem && (state.error || state.steps.length === 0)) {
       nextBtn.disabled = true;
     }
     nextBtn.addEventListener('click', function () {
+      if (syncInputs() && state.error) {
+        render();
+        return;
+      }
       var s = advance('-');
       if (!s) state.status = { kind: 'info', text: 'Semua referensi sudah habis. Tekan Reset untuk mengulang.' };
       render();
     });
     ctrl.appendChild(nextBtn);
 
-    var compareBtn = document.createElement('button');
+    compareBtn = document.createElement('button');
     compareBtn.type = 'button';
     compareBtn.className = 'btn-secondary';
     compareBtn.title = 'Bandingkan jumlah Page Fault & Hit Ratio untuk FIFO, LRU, dan OPTIMAL';
     compareBtn.textContent = 'Compare All';
-    if (state.refs.length === 0) compareBtn.disabled = true;
+    if (!dirtyMem && state.refs.length === 0) compareBtn.disabled = true;
     compareBtn.addEventListener('click', function () {
+      if (syncInputs() && state.error) {
+        render();
+        return;
+      }
       state.compareOpen = !state.compareOpen;
       state.compareResult = state.compareOpen ? runCompare() : null;
       render();

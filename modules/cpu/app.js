@@ -43,7 +43,9 @@
     return {
       algorithm: 'RR',
       quantumText: '2',
+      loadedQuantumText: '2',
       inputText: DEFAULT_INPUT,
+      loadedInputText: DEFAULT_INPUT,
       processes: [],    // hasil parse input
       gantt: [],        // hasil CpuLogic.run
       perProcess: [],
@@ -51,6 +53,7 @@
       error: '',        // pesan error untuk ditampilkan
       status: null,     // { kind, text } pesan hasil aksi terakhir
       compare: null,    // hasil Compare All (null = belum dijalankan)
+      compareQuantum: 2,
       helpOpen: false   // tampilkan panel bantuan (?)
     };
   }
@@ -98,6 +101,8 @@
 
   // alasan = teks log; null = diam (dipakai saat inisialisasi)
   function recalc(alasan) {
+    state.loadedInputText = state.inputText;
+    state.loadedQuantumText = state.quantumText;
     state.compare = null;
     state.pointer = 0;
     state.error = '';
@@ -164,7 +169,21 @@
     render();
   }
 
+  function syncDirtyInputs() {
+    var inputDirty = state.inputText !== state.loadedInputText;
+    var quantumDirty = state.algorithm === 'RR' && state.quantumText !== state.loadedQuantumText;
+    if (inputDirty || quantumDirty) {
+      recalc(inputDirty ? 'data dimuat' : 'quantum diubah');
+      return true;
+    }
+    return false;
+  }
+
   function dispatch() {
+    if (syncDirtyInputs() && state.error) {
+      render();
+      return;
+    }
     var total = state.gantt.length;
     if (total === 0) {
       state.status = { kind: 'warn', text: 'Tidak ada proses untuk di-dispatch. Periksa input lalu tekan Load Data.' };
@@ -203,13 +222,17 @@
   }
 
   function compareAll() {
+    syncDirtyInputs();
+    var qNum = Number(state.quantumText);
+    var qUsed = (state.algorithm !== 'RR' && (!Number.isInteger(qNum) || qNum < 1)) ? 2 : qNum;
+    state.compareQuantum = qUsed;
     if (state.error && state.processes.length === 0) {
       state.compare = [{ algo: '-', ok: false, message: state.error }];
     } else {
       state.compare = ALGORITMA.map(function (a) {
         var res = window.CpuLogic.run({
           algorithm: a,
-          quantum: Number(state.quantumText),
+          quantum: qUsed,
           processes: state.processes
         });
         if (!res.ok) return { algo: a, ok: false, message: res.error.message };
@@ -292,6 +315,8 @@
     topbar.appendChild(helpBtn);
     container.appendChild(topbar);
 
+    var bDisp = null;
+
     // --- Algoritma + quantum ---
     var secAlgo = el('div', 'app-section');
     secAlgo.appendChild(el('div', 'app-label', 'Algoritma:'));
@@ -309,8 +334,26 @@
       q.type = 'number';
       q.min = '1';
       q.value = state.quantumText;
-      q.addEventListener('input', guard(function () { state.quantumText = q.value; }));
-      q.addEventListener('change', guard(function () { state.quantumText = q.value; recalc('quantum diubah'); render(); }));
+      q.addEventListener('input', guard(function () {
+        state.quantumText = q.value;
+        if (bDisp) bDisp.disabled = false;
+      }));
+      q.addEventListener('keydown', guard(function (ev) {
+        if (ev.key === 'Enter') {
+          state.quantumText = q.value;
+          recalc('quantum diubah');
+          render();
+        }
+      }));
+      q.addEventListener('blur', guard(function (ev) {
+        state.quantumText = q.value;
+        var rel = ev && ev.relatedTarget;
+        if (rel && container && container.contains(rel) && rel.tagName === 'BUTTON') return;
+        if (state.quantumText !== state.loadedQuantumText) {
+          recalc('quantum diubah');
+          render();
+        }
+      }));
       rowAlgo.appendChild(q);
     }
     secAlgo.appendChild(rowAlgo);
@@ -324,7 +367,10 @@
     var inp = el('input', 'cpu-input cpu-input-procs');
     inp.type = 'text';
     inp.value = state.inputText;
-    inp.addEventListener('input', guard(function () { state.inputText = inp.value; }));
+    inp.addEventListener('input', guard(function () {
+      state.inputText = inp.value;
+      if (bDisp) bDisp.disabled = false;
+    }));
     inp.addEventListener('keydown', guard(function (ev) { if (ev.key === 'Enter') muatData(); }));
     rowIn.appendChild(inp);
     var btnLoad = el('button', 'btn-secondary', 'Load Data');
@@ -399,10 +445,11 @@
 
     // --- Tombol aksi ---
     var secBtn = el('div', 'app-section app-row cpu-row');
-    var bDisp = el('button', 'btn-primary', 'Dispatch');
+    bDisp = el('button', 'btn-primary', 'Dispatch');
     bDisp.type = 'button';
     bDisp.title = 'Jalankan satu langkah Gantt dan kirim os:dispatch ke Memory';
-    bDisp.disabled = state.gantt.length === 0;
+    var dirtyCpu = state.inputText !== state.loadedInputText || (state.algorithm === 'RR' && state.quantumText !== state.loadedQuantumText);
+    bDisp.disabled = state.gantt.length === 0 && !dirtyCpu;
     bDisp.addEventListener('click', guard(dispatch));
     secBtn.appendChild(bDisp);
     var bReset = el('button', 'btn-secondary', 'Reset');
@@ -455,7 +502,7 @@
       });
       tc.appendChild(tb);
       secC.appendChild(tc);
-      secC.appendChild(el('div', 'cpu-note', 'RR memakai quantum = ' + state.quantumText + '. Terbaik = avgWaiting terkecil.'));
+      secC.appendChild(el('div', 'cpu-note', 'RR memakai quantum = ' + state.compareQuantum + '. Terbaik = avgWaiting terkecil.'));
       container.appendChild(secC);
     }
   }

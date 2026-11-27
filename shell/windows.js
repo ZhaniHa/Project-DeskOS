@@ -38,12 +38,24 @@
     window.kirimLog('SISTEM', 'Error pada ' + app.title + ': ' + (error && error.message ? error.message : error));
   }
 
+  function clampWin(win) {
+    var maxWidth = Math.max(0, window.innerWidth - 24);
+    win.style.width = Math.min(win.offsetWidth, maxWidth) + 'px';
+    var maxLeft = Math.max(12, window.innerWidth - win.offsetWidth - 12);
+    win.style.left = Math.min(win.offsetLeft, maxLeft) + 'px';
+    var maxTop = Math.max(12, taskbarTop() - 212);
+    win.style.top = Math.min(win.offsetTop, maxTop) + 'px';
+    var maxHeight = Math.max(0, taskbarTop() - win.offsetTop - 12);
+    win.style.height = Math.min(win.offsetHeight, maxHeight) + 'px';
+  }
+
   function openApp(id) {
     var app = appById(id);
     if (!app) return;
     var existing = wins.get(id);
     if (existing) {
       existing.el.style.display = 'flex';
+      clampWin(existing.el);
       focusWin(existing);
       return;
     }
@@ -122,17 +134,11 @@
     }
   });
   document.addEventListener('mouseup', function () { drag = null; resize = null; });
+  window.addEventListener('blur', function () { drag = null; resize = null; });
   window.addEventListener('resize', function () {
     wins.forEach(function (w) {
-      var win = w.el;
-      var maxWidth = Math.max(0, window.innerWidth - 24);
-      win.style.width = Math.min(win.offsetWidth, maxWidth) + 'px';
-      var maxLeft = Math.max(12, window.innerWidth - win.offsetWidth - 12);
-      win.style.left = Math.min(win.offsetLeft, maxLeft) + 'px';
-      var maxTop = Math.max(12, taskbarTop() - 212);
-      win.style.top = Math.min(win.offsetTop, maxTop) + 'px';
-      var maxHeight = Math.max(0, taskbarTop() - win.offsetTop - 12);
-      win.style.height = Math.min(win.offsetHeight, maxHeight) + 'px';
+      if (w.el.style.display === 'none') return;
+      clampWin(w.el);
     });
   });
 
@@ -157,7 +163,7 @@
       b.dataset.app = id;
       b.addEventListener('click', function () {
         if (w === topVisible()) { w.el.style.display = 'none'; updateTaskbar(); }
-        else { w.el.style.display = 'flex'; focusWin(w); }
+        else { w.el.style.display = 'flex'; clampWin(w.el); focusWin(w); }
       });
       list.appendChild(b);
     });
