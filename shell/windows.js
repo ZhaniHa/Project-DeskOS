@@ -88,16 +88,21 @@
     var w = { el: win, app: app };
     wins.set(id, w);
 
-    bar.addEventListener('mousedown', function (e) {
+    bar.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
       if (e.target.closest('button')) return;
-      drag = { el: win, ox: e.clientX - win.offsetLeft, oy: e.clientY - win.offsetTop };
+      drag = { el: win, id: e.pointerId, ox: e.clientX - win.offsetLeft, oy: e.clientY - win.offsetTop };
+      if (bar.setPointerCapture) { try { bar.setPointerCapture(e.pointerId); } catch (_) {} }
       e.preventDefault();
     });
-    handle.addEventListener('mousedown', function (e) {
-      resize = { el: win, x: e.clientX, y: e.clientY, w: win.offsetWidth, h: win.offsetHeight };
+    handle.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      focusWin(w);
+      resize = { el: win, id: e.pointerId, x: e.clientX, y: e.clientY, w: win.offsetWidth, h: win.offsetHeight };
+      if (handle.setPointerCapture) { try { handle.setPointerCapture(e.pointerId); } catch (_) {} }
       e.preventDefault(); e.stopPropagation();
     });
-    win.addEventListener('mousedown', function () { focusWin(w); });
+    win.addEventListener('pointerdown', function () { focusWin(w); });
     bMin.addEventListener('click', function () { win.style.display = 'none'; updateTaskbar(); });
     bClose.addEventListener('click', function () { closeApp(id); });
 
@@ -117,14 +122,14 @@
     updateTaskbar();
   }
 
-  document.addEventListener('mousemove', function (e) {
-    if (drag) {
+  document.addEventListener('pointermove', function (e) {
+    if (drag && e.pointerId === drag.id) {
       var maxLeft = Math.max(0, window.innerWidth - drag.el.offsetWidth);
       drag.el.style.left = Math.min(maxLeft, Math.max(0, e.clientX - drag.ox)) + 'px';
       var maxTop = Math.max(0, taskbarTop() - drag.el.offsetHeight - 12);
       drag.el.style.top = Math.min(maxTop, Math.max(0, e.clientY - drag.oy)) + 'px';
     }
-    if (resize) {
+    if (resize && e.pointerId === resize.id) {
       var maxWidth = Math.max(0, window.innerWidth - resize.el.offsetLeft - 12);
       var minWidth = Math.min(320, maxWidth);
       resize.el.style.width = Math.min(maxWidth, Math.max(minWidth, resize.w + e.clientX - resize.x)) + 'px';
@@ -133,7 +138,12 @@
       resize.el.style.height = Math.min(maxHeight, Math.max(minHeight, resize.h + e.clientY - resize.y)) + 'px';
     }
   });
-  document.addEventListener('mouseup', function () { drag = null; resize = null; });
+  function endPointer(e) {
+    if (drag && (!e || e.pointerId === undefined || e.pointerId === drag.id)) drag = null;
+    if (resize && (!e || e.pointerId === undefined || e.pointerId === resize.id)) resize = null;
+  }
+  document.addEventListener('pointerup', endPointer);
+  document.addEventListener('pointercancel', endPointer);
   window.addEventListener('blur', function () { drag = null; resize = null; });
   window.addEventListener('resize', function () {
     wins.forEach(function (w) {
